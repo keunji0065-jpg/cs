@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>엠버언니CS - 라이브 퀵 모드</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f3f4f6; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 메모지 라인 배경 */
+        .memo-bg {
+            background-image: repeating-linear-gradient(transparent, transparent 27px, #fde047 28px);
+            line-height: 28px;
+            background-attachment: local;
+            padding-top: 4px;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { primary: '#f472b6', primaryHover: '#db2777' } } }
+        }
+    </script>
+</head>
+<body class="text-gray-800 h-screen flex overflow-hidden selection:bg-pink-200">
+
+    <div id="loadingOverlay" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white bg-opacity-90">
+        <i class="fa-solid fa-spinner fa-spin text-primary text-4xl mb-4"></i>
+        <p class="font-bold text-gray-600">클라우드 서버와 동기화 중입니다...</p>
+    </div>
+
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out bg-gray-900 text-white flex-shrink-0 flex flex-col z-40">
+        <div class="h-14 flex items-center justify-between px-4 bg-primary border-b border-pink-600">
+            <h1 class="text-lg font-bold tracking-wider"><i class="fa-solid fa-bolt text-yellow-300 mr-2"></i>엠버언니 CS</h1>
+            <button class="md:hidden text-white" onclick="toggleSidebar()"><i class="fa-solid fa-xmark text-xl"></i></button>
+        </div>
+        
+        <div class="p-3 border-b border-gray-700 bg-gray-800">
+            <button onclick="openSettings()" class="w-full bg-gray-700 hover:bg-gray-600 text-gray-300 text-sm font-bold py-2.5 rounded transition-colors flex justify-center items-center gap-2 border border-gray-600 shadow-sm">
+                <i class="fa-brands fa-google text-blue-400"></i> 구글 시트 연동 설정
+            </button>
+        </div>
+
+        <div class="p-3 border-b border-gray-700 bg-gray-800">
+            <div class="text-xs text-gray-400 font-bold mb-2 uppercase tracking-wider">유형별 모아보기</div>
+            <ul class="space-y-1">
+                <li id="filter-all" onclick="selectFilter('all')" class="flex items-center px-3 py-2 md:py-1.5 rounded cursor-pointer text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-list mr-2 w-4 text-center"></i><span class="text-sm">전체보기</span>
+                </li>
+                <li id="filter-구매대기" onclick="selectFilter('구매대기')" class="flex items-center px-3 py-2 md:py-1.5 rounded cursor-pointer text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-list-check mr-2 w-4 text-center text-teal-400"></i><span class="text-sm">구매대기 모아보기</span>
+                </li>
+                <li id="filter-환불" onclick="selectFilter('환불')" class="flex items-center px-3 py-2 md:py-1.5 rounded cursor-pointer text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-won-sign mr-2 w-4 text-center text-red-400"></i><span class="text-sm">환불 전체 모아보기</span>
+                </li>
+                <li id="filter-교환" onclick="selectFilter('교환')" class="flex items-center px-3 py-2 md:py-1.5 rounded cursor-pointer text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-right-left mr-2 w-4 text-center"></i><span class="text-sm">교환 모아보기</span>
+                </li>
+                <li id="filter-반품" onclick="selectFilter('반품')" class="flex items-center px-3 py-2 md:py-1.5 rounded cursor-pointer text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-rotate-left mr-2 w-4 text-center"></i><span class="text-sm">반품 모아보기</span>
+                </li>
+                <li id="filter-재발송" onclick="selectFilter('재발송')" class="flex items-center px-3 py-2 md:py-1.5 rounded cursor-pointer text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-box-open mr-2 w-4 text-center"></i><span class="text-sm">재발송 모아보기</span>
+                </li>
+                <li id="filter-기타" onclick="selectFilter('기타')" class="flex items-center px-3 py-2 md:py-1.5 rounded cursor-pointer text-gray-300 hover:bg-gray-700 transition-colors">
+                    <i class="fa-solid fa-ellipsis mr-2 w-4 text-center"></i><span class="text-sm">기타 모아보기</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="p-3 border-b border-gray-700">
+            <div class="text-xs text-gray-400 font-bold mb-2 uppercase tracking-wider">새 창고/방송일 추가</div>
+            <div class="flex gap-2">
+                <input type="text" id="newWarehouseInput" placeholder="예: 0522 A창고" class="flex-1 bg-gray-800 text-white px-2 py-2 text-sm rounded border border-gray-600 focus:outline-none focus:border-primary">
+                <button onclick="addWarehouse()" class="bg-gray-700 hover:bg-gray-600 px-4 rounded text-sm transition-colors"><i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto py-2">
+            <div class="text-xs text-gray-400 font-bold px-4 mb-2 uppercase tracking-wider">창고 목록</div>
+            <ul id="warehouseList" class="space-y-1 px-2 pb-4">
+                <!-- 동적 렌더링 -->
+            </ul>
+        </div>
+
+        <div class="p-3 text-center text-xs text-gray-500 border-t border-gray-800 mt-auto">
+            Created by. <span class="font-bold text-gray-400">깔로</span>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full relative min-w-0">
+        <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 md:px-6 justify-between flex-shrink-0 shadow-sm z-10">
+            <div class="flex items-center gap-3">
+                <button class="md:hidden text-gray-600 hover:text-primary transition-colors" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <h2 id="currentWarehouseTitle" class="text-lg md:text-xl font-bold text-gray-800 truncate max-w-[150px] md:max-w-xs">창고를 선택해주세요</h2>
+            </div>
+            
+            <div class="flex items-center gap-3 md:gap-4 text-xs md:text-sm font-medium">
+                <button onclick="exportToCSV()" class="hidden md:flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded border border-green-200 hover:bg-green-100 transition-colors">
+                    <i class="fa-solid fa-file-excel"></i> 엑셀저장
+                </button>
+                <div class="hidden sm:flex gap-3">
+                    <span class="text-gray-600">전체 <span id="count-total" class="font-bold">0</span></span>
+                    <span class="text-red-500">미완료 <span id="count-incomplete" class="font-bold">0</span></span>
+                    <span class="text-green-600">완료 <span id="count-completed" class="font-bold">0</span></span>
+                </div>
+            </div>
+        </header>
+
+        <div class="sm:hidden flex justify-between bg-white px-4 py-2 border-b text-xs font-bold text-gray-600">
+            <span>전체 <span id="m-count-total" class="text-gray-800">0</span></span>
+            <span class="text-red-500">미완료 <span id="m-count-incomplete">0</span></span>
+            <span class="text-green-600">완료 <span id="m-count-completed">0</span></span>
+            <button onclick="exportToCSV()" class="text-green-600"><i class="fa-solid fa-download"></i> CSV</button>
+        </div>
+
+        <div id="quickFormArea" class="bg-white border-b border-gray-200 p-4 flex-shrink-0 shadow-sm hidden">
+            <div class="max-w-6xl mx-auto">
+                <div class="mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-bold text-gray-600 whitespace-nowrap hidden sm:block">유형</span>
+                        <div class="flex bg-gray-100 p-1 rounded-lg gap-1 overflow-x-auto hide-scroll w-full" id="typeGroup">
+                            <button type="button" class="btn-type flex-shrink-0" data-val="구매대기" onclick="setFormType('구매대기')">구매대기</button>
+                            <button type="button" class="btn-type flex-shrink-0" data-val="교환" onclick="setFormType('교환')">교환</button>
+                            <button type="button" class="btn-type flex-shrink-0" data-val="반품" onclick="setFormType('반품')">반품</button>
+                            <button type="button" class="btn-type flex-shrink-0" data-val="환불" onclick="setFormType('환불')">환불</button>
+                            <button type="button" class="btn-type flex-shrink-0" data-val="재발송" onclick="setFormType('재발송')">재발송</button>
+                            <button type="button" class="btn-type flex-shrink-0" data-val="기타" onclick="setFormType('기타')">기타</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CS 입력 폼 (구매대기 선택 시 숨겨짐) -->
+                <div id="csFormFields" class="flex flex-col gap-3">
+                    <input type="hidden" id="form-id">
+                    <div class="flex flex-col md:flex-row gap-3 md:items-start">
+                        <div class="flex flex-col gap-3 md:w-auto w-full">
+                            <div class="flex gap-3">
+                                <div class="flex-1 md:w-32">
+                                    <label id="label-nickname" class="block text-xs text-gray-500 mb-1">닉네임*</label>
+                                    <input type="text" id="form-nickname" oninput="triggerAutoSave()" class="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="닉네임">
+                                </div>
+                                <div class="flex-1 md:w-24">
+                                    <label class="block text-xs text-gray-500 mb-1">이름</label>
+                                    <input type="text" id="form-name" oninput="triggerAutoSave()" class="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="실명(선택)">
+                                </div>
+                            </div>
+                            <div class="flex gap-3">
+                                <div class="flex-1 md:w-28">
+                                    <label class="block text-xs text-gray-500 mb-1">원 송장번호</label>
+                                    <input type="text" id="form-trackingOrg" oninput="triggerAutoSave()" class="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="발송 송장">
+                                </div>
+                                <div class="flex-1 md:w-28">
+                                    <label class="block text-xs text-gray-500 mb-1">반품 송장번호</label>
+                                    <input type="text" id="form-trackingRet" oninput="triggerAutoSave()" class="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="회수 송장">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-full md:flex-1">
+                            <label class="block text-xs text-gray-500 mb-1">상세 내용* (엔터키로 줄바꿈)</label>
+                            <textarea id="form-content" oninput="triggerAutoSave()" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none h-24 md:h-[98px]" placeholder="내용을 입력하세요"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-3 md:items-end mt-1">
+                        <div class="flex gap-3 md:w-auto w-full">
+                            <div class="w-1/3 md:w-32">
+                                <label class="block text-xs text-gray-500 mb-1">환불금액</label>
+                                <input type="number" id="form-refund" oninput="triggerAutoSave()" class="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="숫자만">
+                            </div>
+                            <div class="w-2/3 md:w-48">
+                                <label class="block text-xs text-gray-500 mb-1">환불계좌</label>
+                                <input type="text" id="form-account" oninput="triggerAutoSave()" class="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="예: 농협 123-4567-89">
+                            </div>
+                        </div>
+                        <div class="hidden md:block flex-1"></div>
+                        <div class="flex gap-2 w-full md:w-auto mt-2 md:mt-0 items-center justify-end">
+                            <span id="autoSaveIndicator" class="hidden text-xs mr-2 font-bold transition-opacity"></span>
+                            
+                            <button id="submitBtn" onclick="saveCS(false)" class="flex-1 md:w-28 bg-primary hover:bg-primaryHover text-white font-bold py-2 px-4 rounded shadow transition-colors md:h-[38px] flex justify-center items-center text-sm">
+                                수동등록(초기화)
+                            </button>
+                            <button id="cancelEditBtn" onclick="resetForm()" class="hidden w-20 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-2 rounded transition-colors md:h-[38px] text-sm">
+                                취소
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto bg-gray-50 p-2 md:p-4 pb-20 md:pb-4 relative">
+            <div id="noWarehouseMsg" class="h-full flex flex-col items-center justify-center text-gray-400">
+                <i class="fa-solid fa-arrow-left text-4xl mb-3 hidden md:block"></i>
+                <i class="fa-solid fa-arrow-up text-4xl mb-3 md:hidden"></i>
+                <p class="text-sm md:text-base">창고를 선택하거나 필터를 클릭해주세요.</p>
+            </div>
+
+            <!-- 🔥 구매대기 전용 메모지 영역 🔥 -->
+            <div id="purchaseStandbyArea" class="hidden max-w-6xl mx-auto h-full flex flex-col">
+                <div id="standbyHeader" class="flex justify-between items-center mb-4 bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-base font-bold text-gray-800" id="standbyWarehouseTitle"><i class="fa-solid fa-list-check text-teal-500 mr-2"></i>창고명</h3>
+                    <div class="flex items-center gap-2">
+                        <span id="autoSaveIndicatorMemo" class="hidden text-xs mr-3 font-bold"></span>
+                        <button id="addMemoPadBtn" onclick="addMemoPad()" class="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1.5 rounded-md text-xs font-bold shadow-sm transition-colors">+ 메모지 추가 (2/4)</button>
+                    </div>
+                </div>
+                <!-- 메모지들이 들어가는 뼈대 -->
+                <div id="memoPadsContainer" class="w-full"></div>
+            </div>
+
+            <div id="tableContainer" class="hidden bg-white shadow-sm rounded-lg border border-gray-200 overflow-x-auto max-w-6xl mx-auto">
+                <table class="w-full divide-y divide-gray-200 min-w-[800px]">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-bold text-gray-600 w-16">유형</th>
+                            <th class="px-3 py-2 text-left text-xs font-bold text-gray-600 w-32">고객정보</th>
+                            <th class="px-3 py-2 text-left text-xs font-bold text-gray-600 w-36">송장번호(원/반품)</th>
+                            <th class="px-3 py-2 text-left text-xs font-bold text-gray-600 min-w-[150px]">상세 내용</th>
+                            <th class="px-3 py-2 text-left text-xs font-bold text-gray-600 w-40">환불정보</th>
+                            <th class="px-3 py-2 text-center text-xs font-bold text-gray-600 w-32">진행 상태</th>
+                            <th class="px-3 py-2 text-right text-xs font-bold text-gray-600 w-16">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="csTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- 동적 추가 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="customDialog" class="fixed inset-0 z-[110] hidden flex items-center justify-center bg-black bg-opacity-40 p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-5 w-full max-w-sm">
+            <h3 id="dialogTitle" class="text-lg font-bold mb-2 text-gray-800">알림</h3>
+            <p id="dialogMsg" class="text-sm text-gray-600 mb-5 leading-relaxed">메시지 내용</p>
+            <div id="dialogBtns" class="flex justify-end gap-2"></div>
+        </div>
+    </div>
+
+    <div id="settingsDialog" class="fixed inset-0 z-[120] hidden flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <h3 class="text-xl font-bold mb-4 text-gray-800"><i class="fa-brands fa-google text-blue-500 mr-2"></i>구글 시트 연동 설정</h3>
+            <p class="text-sm text-gray-600 mb-4">가이드 문서를 보고 생성한 <b>앱스 스크립트 웹앱 URL</b>을 아래에 붙여넣어 주세요.</p>
+            <input type="text" id="scriptUrlInput" class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary mb-4" placeholder="https://script.google.com/macros/s/...">
+            <div class="flex justify-end gap-2">
+                <button onclick="document.getElementById('settingsDialog').classList.add('hidden')" class="px-4 py-2 text-sm rounded bg-gray-200 text-gray-700 hover:bg-gray-300 font-bold">닫기</button>
+                <button onclick="saveSettings()" class="px-4 py-2 text-sm rounded bg-blue-500 text-white hover:bg-blue-600 font-bold">저장 및 불러오기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.warehouses = [];
+        window.csData = [];
+        window.currentWarehouseId = null;
+        window.viewMode = 'warehouse';
+        window.currentFilter = null;
+        window.formActiveType = '구매대기';
+        
+        window.SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWWyhOE8-ICAtzjpnTGaTYZFJ1_I_gfCni7Q_YWszhg3zNJqtvJGSH-KzOGNEzX5qP/exec';
+
+        // --- 구글 시트 API ---
+        async function apiCall(action, data = {}) {
+            if (!window.SCRIPT_URL) return { success: true, local: true }; 
+            try {
+                const response = await fetch(window.SCRIPT_URL, {
+                    method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action, data })
+                });
+                const result = await response.json();
+                if (result.error) return { success: false, error: result.error };
+                return result;
+            } catch (e) {
+                return { success: false, error: e.message }; 
+            }
+        }
+
+        // --- 앱 초기화 ---
+        async function fetchInitialData() {
+            if (!window.SCRIPT_URL) { hideLoading(); window.renderWarehouses(); return; }
+            showLoading('구글 시트에서 데이터를 불러오는 중...');
+            const result = await apiCall('get_all');
+            hideLoading();
+
+            if (result && result.success !== false && !result.error) {
+                window.warehouses = result.warehouses || [];
+                window.csData = result.csData || [];
+                window.warehouses.sort((a,b) => (a.createdAt || 0) - (b.createdAt || 0));
+                window.csData.sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+                
+                window.renderWarehouses();
+                if (window.warehouses.length > 0 && window.viewMode === 'warehouse' && !window.currentWarehouseId) {
+                    window.selectWarehouse(window.warehouses[0].id);
+                } else {
+                    window.renderTable();
+                }
+            } else {
+                let errorMsg = '데이터를 가져오지 못했습니다. 앱스 스크립트 URL이 정확한지 확인해주세요.';
+                if (result.error && result.error.includes('fetch')) {
+                    errorMsg = '구글 시트 접근이 차단되었습니다.\n\n[해결 방법]\n배포하실 때 "액세스 권한"을 [모든 사용자(Anyone)]로 설정하셔야 합니다!';
+                }
+                window.showDialog('연결 실패', errorMsg, false);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { fetchInitialData(); });
+
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        };
+
+        window.showLoading = function(msg = '동기화 중...') {
+            document.querySelector('#loadingOverlay p').textContent = msg;
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        };
+        window.hideLoading = function() { document.getElementById('loadingOverlay').classList.add('hidden'); };
+        window.openSettings = function() {
+            document.getElementById('scriptUrlInput').value = window.SCRIPT_URL;
+            document.getElementById('settingsDialog').classList.remove('hidden');
+            if(window.innerWidth < 768) window.toggleSidebar();
+        };
+        window.saveSettings = function() {
+            const url = document.getElementById('scriptUrlInput').value.trim();
+            window.SCRIPT_URL = url;
+            localStorage.setItem('amber_cs_script_url', url);
+            document.getElementById('settingsDialog').classList.add('hidden');
+            if(url) fetchInitialData();
+        };
+
+        // --- ⚡ 메모장(구매대기) 시스템 ---
+        function getMemosArray(wh) {
+            let memos = [];
+            try { 
+                memos = JSON.parse(wh.memo || '[]'); 
+                if(!Array.isArray(memos)) memos = [wh.memo || '', '']; 
+            } catch(e) { memos = [wh.memo || '', '']; }
+            while(memos.length < 2) memos.push(''); // 기본 2장 보장
+            return memos;
+        }
+
+        window.renderMemoPads = function() {
+            const container = document.getElementById('memoPadsContainer');
+            container.innerHTML = '';
+            let targetWarehouses = [];
+
+            if (window.viewMode === 'filter' && window.currentFilter === '구매대기') {
+                document.getElementById('standbyHeader').classList.add('hidden');
+                targetWarehouses = window.warehouses;
+            } else if (window.viewMode === 'warehouse' && window.currentWarehouseId) {
+                document.getElementById('standbyHeader').classList.remove('hidden');
+                const wh = window.warehouses.find(w => w.id === window.currentWarehouseId);
+                if(wh) {
+                    targetWarehouses = [wh];
+                    document.getElementById('standbyWarehouseTitle').innerHTML = `<i class="fa-solid fa-list-check text-teal-500 mr-2"></i>[${wh.name}] 구매대기`;
+                }
+            }
+
+            let padCount = 0;
+
+            targetWarehouses.forEach(wh => {
+                const memos = getMemosArray(wh);
+                
+                // 필터모드에서는 완전히 빈 메모는 스킵
+                if (window.viewMode === 'filter' && memos.every(m => m.trim() === '')) return;
+
+                if (window.viewMode === 'warehouse') {
+                    const btn = document.getElementById('addMemoPadBtn');
+                    if(memos.length >= 4) btn.classList.add('hidden');
+                    else { btn.classList.remove('hidden'); btn.textContent = `+ 메모지 추가 (${memos.length}/4)`; }
+                }
+
+                memos.forEach((memoText, index) => {
+                    padCount++;
+                    const pad = document.createElement('div');
+                    pad.className = "bg-yellow-50 border border-yellow-300 shadow-md flex flex-col h-[650px] relative rounded-lg overflow-hidden";
+                    
+                    const padTitle = window.viewMode === 'filter' ? `${wh.name} - 메모 ${index+1}` : `메모 ${index + 1}`;
+                    const showDelete = window.viewMode === 'warehouse' && memos.length > 2;
+
+                    pad.innerHTML = `
+                        <div class="bg-yellow-200 border-b border-yellow-300 px-3 py-2 flex justify-between items-center shadow-sm z-10">
+                            <span class="text-sm font-bold text-yellow-900">${padTitle}</span>
+                            <div class="flex gap-3 items-center">
+                                <button onclick="toggleMemoMode('${wh.id}', ${index})" class="text-yellow-700 hover:text-teal-600 text-xs font-bold px-1" title="체크리스트 모드 전환"><i class="fa-solid fa-list-check mr-1"></i>모드전환</button>
+                                ${showDelete ? `<button onclick="removeMemoPad('${wh.id}', ${index})" class="text-yellow-600 hover:text-red-500 text-sm" title="메모지 삭제"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex-1 relative p-2 flex flex-col overflow-hidden">
+                            <textarea id="memo-edit-${wh.id}-${index}" class="w-full flex-1 bg-transparent resize-none focus:outline-none text-gray-800 text-[15px] memo-bg" oninput="triggerMemoSave('${wh.id}', ${index})">${memoText}</textarea>
+                            <div id="memo-view-${wh.id}-${index}" class="w-full flex-1 hidden overflow-y-auto text-[15px] leading-[28px] px-1 pt-1"></div>
+                        </div>
+                    `;
+                    container.appendChild(pad);
+                });
+            });
+
+            if (window.viewMode === 'warehouse') {
+                const count = Math.max(2, padCount);
+                container.className = `grid gap-5 w-full grid-cols-1 md:grid-cols-${Math.min(4, count)}`;
+            } else {
+                container.className = `grid gap-5 w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`;
+            }
+        };
+
+        // 0.8초 타이머 자동저장 (메모장 전용)
+        let memoSaveTimeouts = {};
+        window.triggerMemoSave = function(whId, index) {
+            if(memoSaveTimeouts[whId]) clearTimeout(memoSaveTimeouts[whId]);
+            
+            const indicator = document.getElementById('autoSaveIndicatorMemo');
+            indicator.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> 대기중...`;
+            indicator.classList.remove('hidden'); indicator.className = 'text-xs text-blue-500 mr-3 font-bold';
+            
+            memoSaveTimeouts[whId] = setTimeout(async () => {
+                const wh = window.warehouses.find(w => w.id === whId);
+                if(!wh) return;
+
+                let memos = getMemosArray(wh);
+                for(let i=0; i<memos.length; i++) {
+                    const ta = document.getElementById(`memo-edit-${whId}-${i}`);
+                    if(ta) memos[i] = ta.value;
+                }
+
+                wh.memo = JSON.stringify(memos);
+                indicator.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> 저장중...`;
+                
+                if(window.SCRIPT_URL) await window.apiCall('edit_wh', wh);
+                
+                indicator.innerHTML = `<i class="fa-solid fa-check mr-1"></i> 완료!`;
+                indicator.className = 'text-xs text-green-500 mr-3 font-bold';
+                setTimeout(() => { indicator.classList.add('hidden'); }, 2000);
+            }, 800);
+        };
+
+        window.addMemoPad = function() {
+            if(!window.currentWarehouseId) return;
+            const wh = window.warehouses.find(w => w.id === window.currentWarehouseId);
+            let memos = getMemosArray(wh);
+            
+            if(memos.length < 4) {
+                memos.push('');
+                wh.memo = JSON.stringify(memos);
+                window.renderMemoPads();
+                window.triggerMemoSave(wh.id, memos.length - 1);
+            }
+        };
+
+        window.removeMemoPad = function(whId, index) {
+            window.showDialog('메모지 삭제', '이 메모지를 완전히 삭제하시겠습니까?', true, () => {
+                const wh = window.warehouses.find(w => w.id === whId);
+                let memos = getMemosArray(wh);
+                memos.splice(index, 1);
+                wh.memo = JSON.stringify(memos);
+                window.renderMemoPads();
+                window.triggerMemoSave(wh.id, 0);
+            });
+        };
+
+        // 편집(Textarea) <-> 체크리스트 모드 전환
+        window.toggleMemoMode = function(whId, index) {
+            const editEl = document.getElementById(`memo-edit-${whId}-${index}`);
+            const viewEl = document.getElementById(`memo-view-${whId}-${index}`);
+            
+            if(editEl.classList.contains('hidden')) {
+                viewEl.classList.add('hidden'); editEl.classList.remove('hidden'); editEl.focus();
+            } else {
+                editEl.classList.add('hidden'); viewEl.classList.remove('hidden');
+                window.renderMemoChecklist(whId, index, editEl.value);
+            }
+        };
+
+        window.renderMemoChecklist = function(whId, index, text) {
+            const viewEl = document.getElementById(`memo-view-${whId}-${index}`);
+            const lines = text.split('\n');
+            viewEl.innerHTML = lines.map((line, lIdx) => {
+                if(!line.trim()) return '<div class="h-[28px]"></div>'; 
+                
+                let isChecked = line.startsWith('[x] ') || line.startsWith('[v] ');
+                let cleanText = line.replace(/^\[[ x]\] /, '').replace(/^\[v\] /, '');
+                
+                return `<div class="flex items-start gap-2 group cursor-pointer h-[28px] hover:bg-yellow-100 rounded px-1 -mx-1" onclick="toggleMemoCheck('${whId}', ${index}, ${lIdx})">
+                    <div class="mt-0.5 ${isChecked ? 'text-teal-500' : 'text-gray-400 group-hover:text-teal-400'}">
+                        <i class="fa-${isChecked ? 'solid fa-square-check' : 'regular fa-square'} text-lg"></i>
+                    </div>
+                    <span class="${isChecked ? 'line-through text-gray-400' : 'text-gray-800'} font-medium truncate" title="${cleanText}">${cleanText}</span>
+                </div>`;
+            }).join('');
+        };
+
+        window.toggleMemoCheck = function(whId, index, lIdx) {
+            const editEl = document.getElementById(`memo-edit-${whId}-${index}`);
+            let lines = editEl.value.split('\n');
+            let line = lines[lIdx];
+            
+            if (line.startsWith('[x] ') || line.startsWith('[v] ')) line = line.replace(/^\[[xv]\] /, '[ ] ');
+            else if (line.startsWith('[ ] ')) line = line.replace(/^\[ \] /, '[x] ');
+            else line = '[x] ' + line; 
+            
+            lines[lIdx] = line;
+            editEl.value = lines.join('\n');
+            window.renderMemoChecklist(whId, index, editEl.value);
+            window.triggerMemoSave(whId, index);
+        };
+
+        // --- ⚡ 기존 자동저장 로직 (CS 폼) ---
+        let autoSaveTimeout = null;
+        window.triggerAutoSave = function() {
+            clearTimeout(autoSaveTimeout);
+            window.showAutoSaveIndicator('대기중...');
+            autoSaveTimeout = setTimeout(() => {
+                const nickname = document.getElementById('form-nickname').value.trim();
+                const content = document.getElementById('form-content').value.trim();
+                if(nickname && content) { window.showAutoSaveIndicator('저장 중...'); window.saveCS(true); } 
+                else { window.hideAutoSaveIndicator(true, true); }
+            }, 800); 
+        };
+        window.showAutoSaveIndicator = function(msg) {
+            const indicator = document.getElementById('autoSaveIndicator');
+            indicator.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> ${msg}`;
+            indicator.classList.remove('hidden'); indicator.className = 'text-xs text-blue-500 mr-2 font-bold';
+        };
+        window.hideAutoSaveIndicator = function(success = true, immediate = false) {
+            const indicator = document.getElementById('autoSaveIndicator');
+            if (immediate) { indicator.classList.add('hidden'); return; }
+            if(success) {
+                indicator.innerHTML = `<i class="fa-solid fa-check mr-1"></i> 자동저장`;
+                indicator.className = 'text-xs text-green-500 mr-2 font-bold';
+            } else {
+                indicator.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> 저장 실패`;
+                indicator.className = 'text-xs text-red-500 mr-2 font-bold';
+            }
+            setTimeout(() => { indicator.classList.add('hidden'); }, 2000);
+        };
+
+        // --- 유형 폼 및 모드 전환 ---
+        window.setFormType = function(type, skipAutoSave = false) {
+            window.formActiveType = type;
+            document.querySelectorAll('.btn-type').forEach(btn => {
+                const btnType = btn.dataset.val;
+                let baseClasses = "btn-type flex-shrink-0 px-3 py-2 md:py-1.5 text-sm rounded-md border border-transparent transition-all duration-200 ";
+                if (btnType === type) {
+                    if(type === '구매대기') baseClasses += 'bg-teal-500 text-white font-bold shadow-md';
+                    else if(type === '교환') baseClasses += 'bg-blue-500 text-white font-bold shadow-md';
+                    else if(type === '반품') baseClasses += 'bg-purple-500 text-white font-bold shadow-md';
+                    else if(type === '환불') baseClasses += 'bg-red-500 text-white font-bold shadow-md';
+                    else if(type === '재발송') baseClasses += 'bg-orange-500 text-white font-bold shadow-md';
+                    else if(type === '기타') baseClasses += 'bg-gray-600 text-white font-bold shadow-md';
+                } else baseClasses += 'text-gray-600 bg-transparent hover:bg-gray-200';
+                btn.className = baseClasses;
+            });
+
+            // 화면 전환 제어
+            const csFields = document.getElementById('csFormFields');
+            const tableCont = document.getElementById('tableContainer');
+            const standbyArea = document.getElementById('purchaseStandbyArea');
+
+            if (type === '구매대기') {
+                if(csFields) csFields.classList.add('hidden');
+                if(tableCont) tableCont.classList.add('hidden');
+                if(standbyArea) { standbyArea.classList.remove('hidden'); window.renderMemoPads(); }
+            } else {
+                if(csFields) csFields.classList.remove('hidden');
+                if(standbyArea) standbyArea.classList.add('hidden');
+                if(window.viewMode === 'warehouse' && tableCont) tableCont.classList.remove('hidden');
+            }
+
+            if(!skipAutoSave && type !== '구매대기') {
+                if(document.getElementById('form-nickname').value || document.getElementById('form-content').value) window.triggerAutoSave();
+            }
+        };
+
+        // --- 사이드바 및 필터 ---
+        window.selectFilter = function(type) {
+            window.viewMode = 'filter';
+            window.currentFilter = type;
+            window.currentWarehouseId = null;
+            if(window.innerWidth < 768) window.toggleSidebar();
+
+            document.querySelectorAll('[id^="filter-"]').forEach(el => el.classList.remove('bg-gray-700', 'text-white'));
+            document.getElementById(`filter-${type}`).classList.add('bg-gray-700', 'text-white');
+
+            const title = type === 'all' ? '전체 내역 모아보기' : `${type} 모아보기`;
+            document.getElementById('currentWarehouseTitle').textContent = title;
+            document.getElementById('quickFormArea').classList.add('hidden');
+            document.getElementById('noWarehouseMsg').classList.add('hidden');
+            
+            if (type === '구매대기') {
+                document.getElementById('tableContainer').classList.add('hidden');
+                document.getElementById('purchaseStandbyArea').classList.remove('hidden');
+                window.renderMemoPads();
+            } else {
+                document.getElementById('purchaseStandbyArea').classList.add('hidden');
+                document.getElementById('tableContainer').classList.remove('hidden');
+                window.renderTable();
+            }
+        };
+
+        window.selectWarehouse = function(id) {
+            window.viewMode = 'warehouse';
+            window.currentWarehouseId = id;
+            window.currentFilter = null;
+            if(window.innerWidth < 768 && document.getElementById('sidebarOverlay').classList.contains('hidden') === false) window.toggleSidebar();
+
+            document.querySelectorAll('[id^="filter-"]').forEach(el => el.classList.remove('bg-gray-700', 'text-white'));
+            window.renderWarehouses(); 
+            
+            const wh = window.warehouses.find(w => w.id === id);
+            document.getElementById('currentWarehouseTitle').textContent = wh ? wh.name : '';
+            
+            document.getElementById('noWarehouseMsg').classList.add('hidden');
+            document.getElementById('quickFormArea').classList.remove('hidden');
+            
+            window.resetForm();
+            window.setFormType(window.formActiveType, true); 
+            window.renderTable();
+        };
+
+        // --- 창고 CRUD ---
+        window.renderWarehouses = function() {
+            const list = document.getElementById('warehouseList');
+            list.innerHTML = '';
+            window.warehouses.forEach(w => {
+                const li = document.createElement('li');
+                const isActive = (window.viewMode === 'warehouse' && w.id === window.currentWarehouseId);
+                li.className = `group flex items-center justify-between px-3 py-2 rounded cursor-pointer transition-colors ${isActive ? 'bg-primary text-white' : 'text-gray-300 hover:bg-gray-800'}`;
+                li.innerHTML = `
+                    <div class="flex-1 flex items-center overflow-hidden" onclick="selectWarehouse('${w.id}')">
+                        <i class="fa-solid fa-box mr-2 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-400'}"></i>
+                        <span id="wh-text-${w.id}" class="truncate font-medium text-sm md:text-base">${w.name}</span>
+                        <input type="text" id="wh-input-${w.id}" class="hidden flex-1 bg-white text-black px-1 text-sm rounded" value="${w.name}" onclick="event.stopPropagation()" onblur="saveWarehouseName('${w.id}')" onkeydown="if(event.key==='Enter') this.blur()">
+                    </div>
+                    <div class="flex gap-3 ml-2 ${isActive ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'} transition-opacity">
+                        <button onclick="editWarehouseName(event, '${w.id}')" class="text-xs hover:scale-110 p-1"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteWarehouse(event, '${w.id}')" class="text-xs hover:text-red-400 hover:scale-110 p-1"><i class="fa-solid fa-trash"></i></button>
+                    </div>`;
+                list.appendChild(li);
+            });
+        };
+
+        window.addWarehouse = async function() {
+            const input = document.getElementById('newWarehouseInput');
+            const name = input.value.trim();
+            if(!name) return;
+            const newId = 'w' + Date.now();
+            const payload = { id: newId, name: name, createdAt: Date.now() };
+            window.warehouses.push(payload);
+            window.renderWarehouses();
+            window.selectWarehouse(newId);
+            input.value = '';
+            if (window.SCRIPT_URL) {
+                window.showLoading('시트에 추가 중...');
+                const result = await apiCall('add_wh', payload);
+                window.hideLoading();
+                if (!result.success) window.showDialog('시트 오류', '실패: ' + result.error, false);
+            }
+        };
+
+        window.editWarehouseName = function(e, id) {
+            e.stopPropagation(); document.getElementById(`wh-text-${id}`).classList.add('hidden');
+            const input = document.getElementById(`wh-input-${id}`);
+            input.classList.remove('hidden'); input.focus();
+        };
+
+        window.saveWarehouseName = async function(id) {
+            const input = document.getElementById(`wh-input-${id}`);
+            const newName = input.value.trim() || '이름 없음';
+            const index = window.warehouses.findIndex(w => w.id === id);
+            if(index > -1 && window.warehouses[index].name !== newName) {
+                window.warehouses[index].name = newName; window.renderWarehouses();
+                if (window.SCRIPT_URL) await apiCall('edit_wh', window.warehouses[index]);
+            } else window.renderWarehouses(); 
+        };
+
+        window.deleteWarehouse = function(e, id) {
+            e.stopPropagation();
+            window.showDialog('창고 삭제', '해당 창고와 관련된 모든 내역이 삭제됩니다. 계속하시겠습니까?', true, async () => {
+                window.warehouses = window.warehouses.filter(w => w.id !== id);
+                window.csData = window.csData.filter(c => c.warehouseId !== id);
+                window.renderWarehouses();
+                if(window.currentWarehouseId === id) {
+                    window.currentWarehouseId = null;
+                    document.getElementById('quickFormArea').classList.add('hidden');
+                    document.getElementById('tableContainer').classList.add('hidden');
+                    document.getElementById('purchaseStandbyArea').classList.add('hidden');
+                    document.getElementById('noWarehouseMsg').classList.remove('hidden');
+                    document.getElementById('currentWarehouseTitle').textContent = '창고를 선택해주세요';
+                }
+                if (window.SCRIPT_URL) { window.showLoading('삭제 중...'); await apiCall('delete_wh', { id }); window.hideLoading(); }
+            });
+        };
+
+        // --- CS 데이터 CRUD ---
+        window.resetForm = function() {
+            document.getElementById('form-id').value = '';
+            ['nickname', 'name', 'trackingOrg', 'trackingRet', 'content', 'refund', 'account'].forEach(id => document.getElementById('form-'+id).value = '');
+            const btn = document.getElementById('submitBtn');
+            btn.innerHTML = '수동등록(초기화)'; btn.className = 'flex-1 md:w-28 bg-primary hover:bg-primaryHover text-white font-bold py-2 px-4 rounded shadow transition-colors md:h-[38px] flex justify-center items-center text-sm';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            window.hideAutoSaveIndicator(true, true);
+            window.setFormType('교환', true); // 리셋 시 교환으로
+            if(window.innerWidth >= 768) document.getElementById('form-nickname').focus();
+        };
+
+        window.getStatusPair = function(type) {
+            if (type === '교환' || type === '반품') return { req: '회수요청', done: '회수완료' };
+            if (type === '환불') return { req: '환불대기', done: '환불완료' };
+            if (type === '재발송') return { req: '재발송요청', done: '재발송완료' };
+            return { req: '미완료', done: '처리완료' };
+        };
+
+        window.saveCS = async function(isAutoSave = false) {
+            clearTimeout(autoSaveTimeout); 
+            if(window.viewMode !== 'warehouse' || !window.currentWarehouseId) {
+                if(!isAutoSave) window.showDialog('오류', '데이터를 등록할 창고를 먼저 선택해주세요.', false); return;
+            }
+
+            const id = document.getElementById('form-id').value;
+            const payload = { warehouseId: window.currentWarehouseId, type: window.formActiveType };
+            ['nickname', 'name', 'trackingOrg', 'trackingRet', 'content', 'refund', 'account'].forEach(k => payload[k] = document.getElementById('form-'+k).value.trim());
+
+            if(!payload.nickname || !payload.content) {
+                if(!isAutoSave) window.showDialog('입력 오류', '닉네임과 상세 내용은 필수입니다.', false); return;
+            }
+
+            let targetId = id;
+            if(targetId) { 
+                payload.id = targetId;
+                const index = window.csData.findIndex(c => c.id === targetId);
+                if(index > -1) { Object.assign(payload, {status: window.csData[index].status, retrievalStatus: window.csData[index].retrievalStatus, refundStatus: window.csData[index].refundStatus, createdAt: window.csData[index].createdAt}); window.csData[index] = payload; }
+            } else { 
+                targetId = 'c' + Date.now(); payload.id = targetId;
+                payload.status = window.getStatusPair(window.formActiveType).req;
+                payload.retrievalStatus = '회수요청'; payload.refundStatus = '환불대기'; payload.createdAt = Date.now();
+                window.csData.unshift(payload);
+
+                if (isAutoSave) {
+                    document.getElementById('form-id').value = targetId;
+                    const btn = document.getElementById('submitBtn');
+                    if(btn.textContent.trim().includes('초기화')) {
+                        btn.innerHTML = '등록완료 <i class="fa-solid fa-check ml-1"></i>';
+                        btn.className = 'flex-1 md:w-28 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow transition-colors md:h-[38px] flex justify-center items-center text-sm';
+                        document.getElementById('cancelEditBtn').classList.remove('hidden'); document.getElementById('cancelEditBtn').textContent = '새로작성';
+                    }
+                }
+            }
+
+            window.renderTable();
+            if (window.SCRIPT_URL) {
+                if (!isAutoSave) window.showLoading(id ? '수정 내용 시트에 반영 중...' : '시트에 등록 중...');
+                const result = await apiCall('save_cs', payload);
+                if (!isAutoSave) window.hideLoading();
+                if(result && result.success) { if(isAutoSave) window.hideAutoSaveIndicator(true); } 
+                else { if(isAutoSave) window.hideAutoSaveIndicator(false); window.showDialog('저장 실패', '오류: ' + (result ? result.error : '알 수 없음'), false); }
+            }
+            if(!isAutoSave) window.resetForm();
+        };
+
+        window.loadCSForEdit = function(id) {
+            const item = window.csData.find(c => c.id === id); if(!item) return;
+            if(window.viewMode === 'filter' || window.currentWarehouseId !== item.warehouseId) window.selectWarehouse(item.warehouseId);
+            
+            document.getElementById('form-id').value = item.id;
+            ['nickname', 'name', 'trackingOrg', 'trackingRet', 'content', 'refund', 'account'].forEach(k => document.getElementById('form-'+k).value = item[k] || '');
+            window.setFormType(item.type, true); 
+
+            const btn = document.getElementById('submitBtn');
+            btn.innerHTML = '수정완료'; btn.className = 'flex-1 md:w-28 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow transition-colors md:h-[38px] flex justify-center items-center text-sm';
+            document.getElementById('cancelEditBtn').classList.remove('hidden'); document.getElementById('cancelEditBtn').textContent = '취소';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.deleteCS = function(id) {
+            window.showDialog('삭제 확인', '이 내역을 삭제하시겠습니까?', true, async () => {
+                window.csData = window.csData.filter(c => c.id !== id); window.renderTable();
+                if (window.SCRIPT_URL) { window.showLoading('삭제 중...'); await apiCall('delete_cs', { id }); window.hideLoading(); }
+            });
+        };
+
+        // --- 토글 상태 ---
+        window.changeDetailStatus = function(id, field, newValue) {
+            const item = window.csData.find(c => c.id === id); if(!item || item[field] === newValue) return; 
+            window.showDialog('상태 변경', `해당 건을 <b>[${newValue}]</b> 상태로 변경하시겠습니까?`, true, async () => {
+                item[field] = newValue; window.renderTable();
+                if (window.SCRIPT_URL) await apiCall('save_cs', item);
+            });
+        };
+
+        window.toggleCompletePrompt = function(id) {
+            const item = window.csData.find(c => c.id === id); if(!item) return;
+            const pair = window.getStatusPair(item.type);
+            const isCompleted = item.status === pair.done;
+            window.showDialog('상태 변경', isCompleted ? `상태를 <b>[${pair.req}]</b> 상태로 되돌리시겠습니까?` : `상태를 <b>[${pair.done}]</b> 상태로 변경하시겠습니까?`, true, async () => {
+                item.status = isCompleted ? pair.req : pair.done; window.renderTable();
+                if (window.SCRIPT_URL) await apiCall('save_cs', item);
+            });
+        };
+
+        // --- 기타 유틸 ---
+        window.copyText = function(text, btnElement) {
+            if(event) event.stopPropagation();
+            const tempInput = document.createElement("textarea"); tempInput.value = text;
+            document.body.appendChild(tempInput); tempInput.select(); document.execCommand("copy"); document.body.removeChild(tempInput);
+            const originalHTML = btnElement.innerHTML; btnElement.innerHTML = '<i class="fa-solid fa-check text-green-500"></i>';
+            setTimeout(() => { btnElement.innerHTML = originalHTML; }, 1500);
+        };
+
+        window.exportToCSV = function() {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF등록일,창고/방송일,유형,전체상태,회수상태,환불상태,닉네임,이름,원 송장번호,반품 송장번호,상세내용,환불금액,환불계좌\n";
+            let exportItems = window.viewMode === 'warehouse' ? window.csData.filter(c => c.warehouseId === window.currentWarehouseId) : (window.currentFilter === 'all' ? window.csData : window.csData.filter(c => c.type === window.currentFilter || (window.currentFilter === '환불' && ((c.refund && c.refund.trim() !== '') || (c.account && c.account.trim() !== '')))));
+            if(exportItems.length === 0) return window.showDialog('알림', '다운로드할 데이터가 없습니다.', false);
+            exportItems.forEach(item => {
+                const wh = window.warehouses.find(w => w.id === item.warehouseId);
+                csvContent += [`"${new Date(item.createdAt || Date.now()).toLocaleString('ko-KR')}"`, `"${wh ? wh.name : '알수없음'}"`, `"${item.type}"`, `"${item.status}"`, `"${item.retrievalStatus || ''}"`, `"${item.refundStatus || ''}"`, `"${item.nickname}"`, `"${item.name || ''}"`, `"${item.trackingOrg || ''}"`, `"${item.trackingRet || ''}"`, `"${(item.content || '').replace(/"/g, '""')}"`, `"${item.refund || ''}"`, `"${item.account || ''}"`].join(",") + "\n";
+            });
+            const link = document.createElement("a"); link.setAttribute("href", encodeURI(csvContent)); link.setAttribute("download", `CS내역_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        };
+
+        window.getTypeColor = function(type) {
+            const colors = { '교환': 'text-blue-600 bg-blue-50 border-blue-200', '반품': 'text-purple-600 bg-purple-50 border-purple-200', '환불': 'text-red-600 bg-red-50 border-red-200', '재발송': 'text-orange-600 bg-orange-50 border-orange-200' };
+            return colors[type] || 'text-gray-600 bg-gray-50 border-gray-200';
+        };
+
+        window.renderTable = function() {
+            let currentItems = window.viewMode === 'warehouse' ? window.csData.filter(c => c.warehouseId === window.currentWarehouseId) : (window.currentFilter === 'all' ? [...window.csData] : (window.currentFilter === '환불' ? window.csData.filter(c => c.type === '환불' || (c.refund && c.refund.trim() !== '') || (c.account && c.account.trim() !== '')) : window.csData.filter(c => c.type === window.currentFilter)));
+            currentItems = currentItems.filter(c => c.type !== '구매대기'); // 구매대기는 테이블에서 제외
+
+            let reqCount = 0, doneCount = 0;
+            currentItems.forEach(item => { 
+                let isItemCompleted = false;
+                if (item.type === '교환') isItemCompleted = (item.retrievalStatus === '회수완료');
+                else if (item.type === '환불') isItemCompleted = (item.refundStatus === '환불완료');
+                else if (item.type === '반품') isItemCompleted = (item.retrievalStatus === '회수완료' && item.refundStatus === '환불완료');
+                else isItemCompleted = (item.status === '처리완료' || item.status === window.getStatusPair(item.type).done);
+                if (isItemCompleted) doneCount++; else reqCount++; 
+            });
+            
+            ['count-total','m-count-total'].forEach(id => document.getElementById(id).textContent = currentItems.length);
+            ['count-incomplete','m-count-incomplete'].forEach(id => document.getElementById(id).textContent = reqCount);
+            ['count-completed','m-count-completed'].forEach(id => document.getElementById(id).textContent = doneCount);
+
+            const tbody = document.getElementById('csTableBody'); tbody.innerHTML = '';
+            if(currentItems.length === 0) return tbody.innerHTML = `<tr><td colspan="7" class="px-4 py-10 text-center text-gray-500">등록된 내역이 없습니다.</td></tr>`;
+
+            currentItems.forEach(item => {
+                const tr = document.createElement('tr'); tr.className = "hover:bg-gray-50 transition-colors group";
+                const typeStyle = window.getTypeColor(item.type);
+                const refundText = item.refund ? Number(item.refund).toLocaleString() + '원' : '-';
+                const copyData = [item.name, item.refund ? Number(item.refund).toLocaleString() + '원' : '', item.account].filter(Boolean).join(' ').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                const accountText = item.account ? `<div class="flex items-center justify-start md:justify-end gap-1 mt-1"><span class="text-xs text-gray-500 truncate max-w-[120px]" title="${item.account}">${item.account}</span><button onclick="copyText('${copyData}', this)" class="text-gray-400 hover:text-indigo-500 p-1 rounded transition-colors" title="복사"><i class="fa-regular fa-copy"></i></button></div>` : '';
+                const whName = window.viewMode === 'filter' ? `<div class="text-[10px] text-primary font-bold mb-1">${window.warehouses.find(w=>w.id===item.warehouseId)?.name || ''}</div>` : '';
+
+                let togglesHtml = `<div class="flex flex-col gap-1.5 w-[130px]">`;
+                if (item.type === '교환' || item.type === '반품') {
+                    const rState = item.retrievalStatus || '회수요청';
+                    togglesHtml += `<div class="flex text-[10px] rounded border border-blue-300 overflow-hidden shadow-sm">
+                        <button onclick="changeDetailStatus('${item.id}', 'retrievalStatus', '회수요청')" class="flex-1 px-1 py-1 whitespace-nowrap ${rState === '회수요청' ? 'bg-blue-500 text-white font-bold' : 'bg-white text-gray-500 hover:bg-blue-50'}">요청</button>
+                        <button onclick="changeDetailStatus('${item.id}', 'retrievalStatus', '회수중')" class="flex-1 px-1 py-1 whitespace-nowrap border-l border-r border-blue-200 ${rState === '회수중' ? 'bg-blue-500 text-white font-bold' : 'bg-white text-gray-500 hover:bg-blue-50'}">중</button>
+                        <button onclick="changeDetailStatus('${item.id}', 'retrievalStatus', '회수완료')" class="flex-1 px-1 py-1 whitespace-nowrap ${rState === '회수완료' ? 'bg-blue-500 text-white font-bold' : 'bg-white text-gray-500 hover:bg-blue-50'}">완료</button>
+                    </div>`;
+                }
+                if (item.type === '환불' || item.type === '반품' || (item.refund && item.refund.trim() !== '') || (item.account && item.account.trim() !== '')) {
+                    const fState = item.refundStatus || '환불대기';
+                    togglesHtml += `<div class="flex text-[10px] rounded border border-red-300 overflow-hidden shadow-sm">
+                        <button onclick="changeDetailStatus('${item.id}', 'refundStatus', '환불대기')" class="flex-1 px-1 py-1 whitespace-nowrap ${fState === '환불대기' ? 'bg-red-500 text-white font-bold' : 'bg-white text-gray-500 hover:bg-red-50'}">대기</button>
+                        <button onclick="changeDetailStatus('${item.id}', 'refundStatus', '환불요청')" class="flex-1 px-1 py-1 whitespace-nowrap border-l border-r border-red-200 ${fState === '환불요청' ? 'bg-red-500 text-white font-bold' : 'bg-white text-gray-500 hover:bg-red-50'}">요청</button>
+                        <button onclick="changeDetailStatus('${item.id}', 'refundStatus', '환불완료')" class="flex-1 px-1 py-1 whitespace-nowrap ${fState === '환불완료' ? 'bg-red-500 text-white font-bold' : 'bg-white text-gray-500 hover:bg-red-50'}">완료</button>
+                    </div>`;
+                }
+                if (item.type === '재발송' || item.type === '기타') {
+                     const isCompleted = item.status === window.getStatusPair(item.type).done;
+                     togglesHtml += isCompleted ? `<button onclick="toggleCompletePrompt('${item.id}')" class="w-full py-1.5 text-xs font-bold rounded bg-green-500 text-white hover:bg-green-600 shadow-sm">${window.getStatusPair(item.type).done} <i class="fa-solid fa-check ml-1"></i></button>` : `<button onclick="toggleCompletePrompt('${item.id}')" class="w-full py-1.5 text-xs font-bold rounded bg-gray-200 text-gray-600 hover:bg-gray-300 shadow-sm">${window.getStatusPair(item.type).req}</button>`;
+                }
+                togglesHtml += `</div>`;
+
+                tr.innerHTML = `<td class="px-3 py-3 whitespace-nowrap align-top md:align-middle"><span class="px-2 py-1 text-xs font-bold rounded border inline-block ${typeStyle}">${item.type}</span></td>
+                    <td class="px-3 py-3 whitespace-nowrap align-top md:align-middle">${whName}<div class="font-bold text-gray-900">${item.nickname}</div><div class="text-xs text-gray-500 mt-1">${item.name ? '이름: '+item.name : ''}</div></td>
+                    <td class="px-3 py-3 text-xs text-gray-700 align-top md:align-middle">${item.trackingOrg ? `<div class="text-gray-500 mb-1">원: <span class="text-gray-800">${item.trackingOrg}</span></div>` : ''}${item.trackingRet ? `<div class="text-gray-500">반품: <span class="text-gray-800">${item.trackingRet}</span></div>` : ''}</td>
+                    <td class="px-3 py-3 text-sm text-gray-700 break-words min-w-[150px] leading-relaxed">${(item.content || '').replace(/\n/g, '<br>')}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-sm text-left md:text-right align-top md:align-middle"><div class="${item.refund ? 'font-bold text-red-500' : 'text-gray-400'}">${refundText}</div>${accountText}</td>
+                    <td class="px-3 py-3 whitespace-nowrap align-top md:align-middle">${togglesHtml}</td>
+                    <td class="px-3 py-3 whitespace-nowrap text-right align-top md:align-middle"><button onclick="loadCSForEdit('${item.id}')" class="text-gray-400 hover:text-indigo-600 mr-1 md:mr-2 p-2 md:p-1"><i class="fa-solid fa-pen-to-square"></i></button><button onclick="deleteCS('${item.id}')" class="text-gray-400 hover:text-red-600 p-2 md:p-1"><i class="fa-solid fa-trash"></i></button></td>`;
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.showDialog = function(title, message, isConfirm, onConfirm) {
+            document.getElementById('dialogTitle').textContent = title;
+            document.getElementById('dialogMsg').innerHTML = message.replace(/\n/g, '<br>'); 
+            const btnContainer = document.getElementById('dialogBtns'); btnContainer.innerHTML = '';
+            const closeBtn = document.createElement('button'); closeBtn.className = "px-4 py-2 text-sm rounded border border-gray-300 hover:bg-gray-100 flex-1 md:flex-none font-medium"; closeBtn.textContent = isConfirm ? '취소' : '확인'; closeBtn.onclick = () => document.getElementById('customDialog').classList.add('hidden'); btnContainer.appendChild(closeBtn);
+            if(isConfirm) {
+                const confirmBtn = document.createElement('button'); confirmBtn.className = "px-4 py-2 text-sm rounded bg-red-500 text-white hover:bg-red-600 font-bold flex-1 md:flex-none"; confirmBtn.textContent = '확인'; confirmBtn.onclick = () => { if(onConfirm) onConfirm(); document.getElementById('customDialog').classList.add('hidden'); }; btnContainer.appendChild(confirmBtn);
+            }
+            document.getElementById('customDialog').classList.remove('hidden');
+        };
+
+        window.setFormType('구매대기'); 
+    </script>
+</body>
+</html>
